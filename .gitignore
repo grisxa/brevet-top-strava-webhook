@@ -1,0 +1,11 @@
+.idea/
+venv/
+coverage/
+.coverage
+htmlcov/
+
+*.pyc
+__pycache__/
+*.egg-info/
+
+temp/

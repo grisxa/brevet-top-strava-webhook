@@ -91,24 +91,34 @@ def enqueue(data: dict):
         logging.error("Invalid subscription id")
         abort(403)
 
-    if data["aspect_type"] == "create" or (
+    if data["aspect_type"] == "create":
+        pass
+    elif (
         data["aspect_type"] == "update"
+        and data["object_type"] == "activity"
         and data.get("updates", {}).get("type") == "Ride"
     ):
-        # put the request in the queue
-        pub_client = google.cloud.pubsub.PublisherClient()
-        topic_path = pub_client.topic_path(  # pylint: disable=no-member
-            project_id, topic
-        )
-        pub_client.publish(topic_path, json.dumps(data).encode("utf-8"))
-        # "Athlete 123 creates/updates 456"
-        logging.info(
-            "Athlete %s %ss %s",
-            data["owner_id"],
-            data["aspect_type"],
-            data["object_id"],
-        )
+        pass
+    elif (
+        data["aspect_type"] == "update"
+        and data["object_type"] == "athlete"
+        and data.get("updates", {}).get("authorized") is False
+    ):
+        pass
     else:
         logging.warning("Ignoring action %s", data["aspect_type"])
+        return "OK"
+
+    # put the request in the queue
+    pub_client = google.cloud.pubsub.PublisherClient()
+    topic_path = pub_client.topic_path(project_id, topic)  # pylint: disable=no-member
+    pub_client.publish(topic_path, json.dumps(data).encode("utf-8"))
+    # "Athlete 123 creates/updates 456"
+    logging.info(
+        "Athlete %s %ss %s",
+        data["owner_id"],
+        data["aspect_type"],
+        data["object_id"],
+    )
 
     return "OK"

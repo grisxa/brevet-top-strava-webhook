@@ -105,13 +105,14 @@ def test_verify_create(mock_publisher, mock_json, caplog):  # noqa: D103
 
 @patch("json.dumps", return_value="data json")
 @patch("google.cloud.pubsub.PublisherClient")
-def test_verify_update(mock_publisher, mock_json, caplog):  # noqa: D103
+def test_verify_update_activity(mock_publisher, mock_json, caplog):  # noqa: D103
     # given
     mock_json.reset_mock()
     caplog.set_level("DEBUG")
     data = {
         "subscription_id": "12345",
         "aspect_type": "update",
+        "object_type": "activity",
         "owner_id": "123",
         "object_id": "456",
         "updates": {"type": "Ride"},
@@ -133,6 +134,7 @@ def test_verify_not_ride(caplog):  # noqa: D103
     data = {
         "subscription_id": "12345",
         "aspect_type": "update",
+        "object_type": "activity",
         "updates": {"type": "test"},
     }
 
@@ -146,7 +148,62 @@ def test_verify_title(caplog):  # noqa: D103
     data = {
         "subscription_id": "12345",
         "aspect_type": "update",
+        "object_type": "activity",
         "updates": {"title": "test"},
+    }
+
+    # then
+    assert enqueue(data) == "OK"
+    assert "Ignoring action update" in caplog.messages
+
+
+@patch("json.dumps", return_value="data json")
+@patch("google.cloud.pubsub.PublisherClient")
+def test_verify_update_athlete(mock_publisher, mock_json, caplog):  # noqa: D103
+    # given
+    mock_json.reset_mock()
+    caplog.set_level("DEBUG")
+    data = {
+        "subscription_id": "12345",
+        "aspect_type": "update",
+        "object_type": "athlete",
+        "owner_id": "123",
+        "object_id": "123",
+        "updates": {"authorized": False},
+    }
+    mock_publisher.return_value.topic_path.return_value = "test/topic"
+
+    # then
+    assert enqueue(data) == "OK"
+    assert "Athlete 123 updates 123" in caplog.messages
+    mock_publisher.return_value.topic_path.assert_called_once_with("project", "topic")
+    mock_publisher.return_value.publish.assert_called_once_with(
+        "test/topic", b"data json"
+    )
+    mock_json.assert_called_once()
+
+
+def test_verify_no_authorized(caplog):  # noqa: D103
+    # given
+    data = {
+        "subscription_id": "12345",
+        "aspect_type": "update",
+        "object_type": "athlete",
+        "updates": {"type": "test"},
+    }
+
+    # then
+    assert enqueue(data) == "OK"
+    assert "Ignoring action update" in caplog.messages
+
+
+def test_verify_wrong_authorized(caplog):  # noqa: D103
+    # given
+    data = {
+        "subscription_id": "12345",
+        "aspect_type": "update",
+        "object_type": "athlete",
+        "updates": {"authorized": True},
     }
 
     # then

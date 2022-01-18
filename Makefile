@@ -6,8 +6,10 @@ deploy:
 	  --entry-point strava_webhook \
 	  --runtime python39 \
 	  --trigger-http \
+	  --memory 128MB \
+	  --timeout 10s \
 	  --allow-unauthenticated \
-	  --set-env-vars 'PUBSUB_TOPIC=strava' \
+	  --set-env-vars 'PUBSUB_TOPIC=strava,GCLOUD_PROJECT=baltic-star-cloud' \
 	  --set-secrets 'STRAVA=projects/baltic-star-cloud/secrets/strava:latest'
 
 # export VERIFY_TOKEN=secret

@@ -25,3 +25,6 @@ Comes as a JSON string with the following keys:
 
 In case all the requirements are met the whole request goes to a Google Pub/Sub service queue
 and triggers another cloud function to pick it up on the other side.
+
+**WARNING**. If the hook doesn't manage to finish in 2 sec. (when _cold_ started) Strava gonna repeat the request in 2 min.
+Next attempt has more chances to succeed due to a _warm_ cloud function state.

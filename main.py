@@ -34,7 +34,7 @@ def strava_webhook(request: Request):
     :return: JSON response
     """
     init_logger()
-    logging.debug("Request %s", request.get_json())
+    logging.info("Request args %s | json %s", request.args.to_dict(), request.get_json())
 
     try:
         if request.method == "GET":
@@ -79,8 +79,6 @@ def enqueue(data: dict):
     :param data: JSON request parameters
     :return: OK
     """
-    logging.debug("Data %s", data)
-
     project_id = os.getenv("GCLOUD_PROJECT")
     topic = os.getenv("PUBSUB_TOPIC")
 

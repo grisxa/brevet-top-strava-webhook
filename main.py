@@ -8,6 +8,7 @@ Events go then to a Goggle Pub/Sub queue.
 """
 import logging
 import os
+from json import JSONDecodeError
 
 import google.cloud.logging
 import google.cloud.pubsub
@@ -82,8 +83,13 @@ def enqueue(data: dict):
     project_id = os.getenv("GCLOUD_PROJECT")
     topic = os.getenv("PUBSUB_TOPIC")
 
+    secret: dict = {}
     # Secret Manager exposed to the environment
-    secret = json.loads(os.getenv("STRAVA"))
+    try:
+        secret = json.loads(os.getenv("STRAVA"))
+    except (TypeError, JSONDecodeError) as error:
+        logging.error("Wrong Strava settings: %s", str(error))
+        abort(500)
 
     if int(data["subscription_id"]) != int(secret["subscription_id"]):
         logging.error("Invalid subscription id")

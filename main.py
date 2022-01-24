@@ -14,6 +14,8 @@ import google.cloud.logging
 import google.cloud.pubsub
 from flask import Request, json, abort
 
+pub_client: google.cloud.pubsub.PublisherClient = None
+
 
 def init_logger():
     """
@@ -35,7 +37,9 @@ def strava_webhook(request: Request):
     :return: JSON response
     """
     init_logger()
-    logging.info("Request args %s | json %s", request.args.to_dict(), request.get_json())
+    logging.info(
+        "Request args %s | json %s", request.args.to_dict(), request.get_json()
+    )
 
     try:
         if request.method == "GET":
@@ -80,9 +84,6 @@ def enqueue(data: dict):
     :param data: JSON request parameters
     :return: OK
     """
-    project_id = os.getenv("GCLOUD_PROJECT")
-    topic = os.getenv("PUBSUB_TOPIC")
-
     secret: dict = {}
     # Secret Manager exposed to the environment
     try:
@@ -113,10 +114,8 @@ def enqueue(data: dict):
         logging.warning("Ignoring action %s", data["aspect_type"])
         return "OK"
 
-    # put the request in the queue
-    pub_client = google.cloud.pubsub.PublisherClient()
-    topic_path = pub_client.topic_path(project_id, topic)  # pylint: disable=no-member
-    pub_client.publish(topic_path, json.dumps(data).encode("utf-8"))
+    forward_message(data)
+
     # "Athlete 123 creates/updates 456"
     logging.info(
         "Athlete %s %ss %s",
@@ -126,3 +125,20 @@ def enqueue(data: dict):
     )
 
     return "OK"
+
+
+def forward_message(data: dict):
+    """
+    Send a message further in the chain: to a PubSub topic.
+
+    :param data: message to send
+    """
+    global pub_client  # pylint: disable=global-statement,invalid-name
+
+    project_id = os.getenv("GCLOUD_PROJECT")
+    topic = os.getenv("PUBSUB_TOPIC")
+
+    # put the request in the queue
+    pub_client = pub_client or google.cloud.pubsub.PublisherClient()
+    topic_path = pub_client.topic_path(project_id, topic)  # pylint: disable=no-member
+    pub_client.publish(topic_path, json.dumps(data).encode("utf-8"))

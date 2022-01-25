@@ -1,3 +1,4 @@
+PORT ?= 9090
 all:
 	functions_framework --target=strava_webhook --signature-type http --port 9090 --debug
 
@@ -14,7 +15,7 @@ deploy:
 
 # export VERIFY_TOKEN=secret
 verify:
-	curl "localhost:9090/baltic-star-cloud/us-central1/stravaWebhook?hub.mode=subscribe&hub.challenge=random&hub.verify_token=${VERIFY_TOKEN}"
+	curl "localhost:$(PORT)/baltic-star-cloud/us-central1/stravaWebhook?hub.mode=subscribe&hub.challenge=random&hub.verify_token=${VERIFY_TOKEN}"
 
 verify-online:
 	curl "https://brevet.top/strava-webhook?hub.mode=subscribe&hub.challenge=random&hub.verify_token=${VERIFY_TOKEN}"

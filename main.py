@@ -106,7 +106,7 @@ def enqueue(data: dict):
     elif (
         data["aspect_type"] == "update"
         and data["object_type"] == "athlete"
-        and data.get("updates", {}).get("authorized") is False
+        and data.get("updates", {}).get("authorized") == "false"
     ):
         pass
     else:

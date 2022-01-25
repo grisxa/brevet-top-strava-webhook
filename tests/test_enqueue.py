@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from werkzeug.exceptions import Forbidden, InternalServerError
 
-from main import enqueue
+from main import enqueue, forward_message
 
 
 @pytest.fixture(autouse=True)
@@ -97,7 +97,30 @@ def test_enqueue_wrong_action(caplog):  # noqa: D103
 
 @patch("json.dumps", return_value="data json")
 @patch("google.cloud.pubsub.PublisherClient")
-def test_enqueue_create(mock_publisher, mock_json, caplog):  # noqa: D103
+def test_forward_message(mock_publisher, mock_json):  # noqa: D103
+    # given
+    mock_json.reset_mock()
+    mock_publisher.return_value.topic_path.return_value = "test/topic"
+    data = {
+        "subscription_id": "12345",
+        "aspect_type": "create",
+        "owner_id": "123",
+        "object_id": "456",
+    }
+
+    # when
+    forward_message(data)
+
+    # then
+    mock_publisher.return_value.topic_path.assert_called_once_with("project", "topic")
+    mock_publisher.return_value.publish.assert_called_once_with(
+        "test/topic", b"data json"
+    )
+    mock_json.assert_called_once()
+
+
+@patch("main.forward_message")
+def test_enqueue_create(mock_forward, caplog):  # noqa: D103
     # given
     caplog.set_level("DEBUG")
     data = {
@@ -106,23 +129,16 @@ def test_enqueue_create(mock_publisher, mock_json, caplog):  # noqa: D103
         "owner_id": "123",
         "object_id": "456",
     }
-    mock_publisher.return_value.topic_path.return_value = "test/topic"
 
     # then
     assert enqueue(data) == "OK"
     assert "Athlete 123 creates 456" in caplog.messages
-    mock_publisher.return_value.topic_path.assert_called_once_with("project", "topic")
-    mock_publisher.return_value.publish.assert_called_once_with(
-        "test/topic", b"data json"
-    )
-    mock_json.assert_called_once()
+    mock_forward.assert_called_once_with(data)
 
 
-@patch("json.dumps", return_value="data json")
-@patch("google.cloud.pubsub.PublisherClient")
-def test_enqueue_update_activity(mock_publisher, mock_json, caplog):  # noqa: D103
+@patch("main.forward_message")
+def test_enqueue_update_activity(mock_forward, caplog):  # noqa: D103
     # given
-    mock_json.reset_mock()
     caplog.set_level("DEBUG")
     data = {
         "subscription_id": "12345",
@@ -132,16 +148,11 @@ def test_enqueue_update_activity(mock_publisher, mock_json, caplog):  # noqa: D1
         "object_id": "456",
         "updates": {"type": "Ride"},
     }
-    mock_publisher.return_value.topic_path.return_value = "test/topic"
 
     # then
     assert enqueue(data) == "OK"
     assert "Athlete 123 updates 456" in caplog.messages
-    mock_publisher.return_value.topic_path.assert_called_once_with("project", "topic")
-    mock_publisher.return_value.publish.assert_called_once_with(
-        "test/topic", b"data json"
-    )
-    mock_json.assert_called_once()
+    mock_forward.assert_called_once_with(data)
 
 
 def test_enqueue_not_ride(caplog):  # noqa: D103
@@ -172,11 +183,9 @@ def test_enqueue_title(caplog):  # noqa: D103
     assert "Ignoring action update" in caplog.messages
 
 
-@patch("json.dumps", return_value="data json")
-@patch("google.cloud.pubsub.PublisherClient")
-def test_enqueue_update_athlete(mock_publisher, mock_json, caplog):  # noqa: D103
+@patch("main.forward_message")
+def test_enqueue_update_athlete(mock_forward, caplog):  # noqa: D103
     # given
-    mock_json.reset_mock()
     caplog.set_level("DEBUG")
     data = {
         "subscription_id": "12345",
@@ -186,16 +195,11 @@ def test_enqueue_update_athlete(mock_publisher, mock_json, caplog):  # noqa: D10
         "object_id": "123",
         "updates": {"authorized": False},
     }
-    mock_publisher.return_value.topic_path.return_value = "test/topic"
 
     # then
     assert enqueue(data) == "OK"
     assert "Athlete 123 updates 123" in caplog.messages
-    mock_publisher.return_value.topic_path.assert_called_once_with("project", "topic")
-    mock_publisher.return_value.publish.assert_called_once_with(
-        "test/topic", b"data json"
-    )
-    mock_json.assert_called_once()
+    mock_forward.assert_called_once_with(data)
 
 
 def test_enqueue_no_authorized(caplog):  # noqa: D103

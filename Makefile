@@ -3,8 +3,8 @@ all:
 
 deploy:
 	gcloud beta functions deploy stravaWebhook \
-	  --entry-point strava_webhook \
-	  --runtime python39 \
+	  --entry-point StravaWebhook \
+	  --runtime go116 \
 	  --trigger-http \
 	  --memory 128MB \
 	  --timeout 10s \

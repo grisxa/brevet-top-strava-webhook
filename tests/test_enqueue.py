@@ -193,7 +193,7 @@ def test_enqueue_update_athlete(mock_forward, caplog):  # noqa: D103
         "object_type": "athlete",
         "owner_id": "123",
         "object_id": "123",
-        "updates": {"authorized": False},
+        "updates": {"authorized": "false"},
     }
 
     # then

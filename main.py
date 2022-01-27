@@ -9,6 +9,7 @@ Events go then to a Goggle Pub/Sub queue.
 import logging
 import os
 from json import JSONDecodeError
+from typing import Optional
 
 import google.cloud.logging
 import google.cloud.pubsub
@@ -56,7 +57,7 @@ def strava_webhook(request: Request):
         return abort(400)
 
 
-def verify(data: dict):
+def verify(data: Optional[dict]):  # pylint: disable=unsubscriptable-object
     """
     Webhook verification request handler.
 
@@ -77,7 +78,7 @@ def verify(data: dict):
     return abort(400)
 
 
-def enqueue(data: dict):
+def enqueue(data: Optional[dict]):  # pylint: disable=unsubscriptable-object
     """
     Put the request in a queue.
 

@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 
-	"cloud.google.com/go/logging"
 	"cloud.google.com/go/pubsub"
 )
 
@@ -35,13 +34,12 @@ type activityAction struct {
 }
 
 var pubClient *pubsub.Client
-var logClient *logging.Client
-var logger *logging.Logger
 var secret stravaCredentials
 
 // Setup Strava credentials and PubSub client.
 func init() {
 	var err error
+	log.SetFlags(0)
 
 	if err = json.Unmarshal([]byte(os.Getenv("STRAVA")), &secret); err != nil {
 		log.Fatalf("Wrong Strava settings %v", err)
@@ -57,14 +55,11 @@ func init() {
 func StravaWebhook(response http.ResponseWriter, request *http.Request) {
 	var err error
 
-	logClient, err = logging.NewClient(context.Background(), os.Getenv("GCLOUD_PROJECT"))
 	if err != nil {
 		log.Fatalf("Failed to create a log client: %v", err)
 
 		return
 	}
-	defer logClient.Close()
-	logger = logClient.Logger("cloudfunctions.googleapis.com/cloud-functions")
 
 	if request.Method == "GET" {
 		verify(response, request.URL.Query())
@@ -78,10 +73,7 @@ func StravaWebhook(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	logger.Log(logging.Entry{
-		Payload:  fmt.Sprintf("Method not allowed %s", request.Method),
-		Severity: logging.Error,
-	})
+	log.Fatalf("Method not allowed %s", request.Method)
 	http.Error(response, fmt.Sprintf("Method not allowed: %s", request.Method), http.StatusMethodNotAllowed)
 }
 
@@ -92,20 +84,14 @@ func verify(response http.ResponseWriter, data url.Values) {
 	challenge := data.Get("hub.challenge")
 
 	if mode != "subscribe" {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Mode not supported %s", mode),
-			Severity: logging.Warning,
-		})
+		log.Printf("Mode not supported %s", mode)
 		http.Error(response, fmt.Sprintf("Mode not supported: %s", mode), http.StatusBadRequest)
 
 		return
 	}
 
 	if token == "" || token != secret.VerifyToken {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Wrong token %s", token),
-			Severity: logging.Warning,
-		})
+		log.Printf("Wrong token %s", token)
 		http.Error(response, "Wrong token", http.StatusUnauthorized)
 
 		return
@@ -118,10 +104,7 @@ func verify(response http.ResponseWriter, data url.Values) {
 func enqueue(response http.ResponseWriter, request *http.Request) {
 	activity := activityAction{}
 	if err := json.NewDecoder(request.Body).Decode(&activity); err != nil {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Wrong request %v", err),
-			Severity: logging.Warning,
-		})
+		log.Printf("Wrong request %v", err)
 		http.Error(response, fmt.Sprintf("Wrong request: %v", err), http.StatusBadRequest)
 
 		return
@@ -147,10 +130,7 @@ func enqueue(response http.ResponseWriter, request *http.Request) {
 
 	payload, err := json.Marshal(activity)
 	if err != nil {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("JSON error %v", err),
-			Severity: logging.Error,
-		})
+		log.Fatalf("JSON error %v", err)
 		http.Error(response, "Error converting message", http.StatusInternalServerError)
 
 		return
@@ -158,13 +138,10 @@ func enqueue(response http.ResponseWriter, request *http.Request) {
 
 	forwardMessage(response, request, payload)
 
-	logger.Log(logging.Entry{
-		Payload: fmt.Sprintf("Athlete %d %ss %d",
+	log.Printf("Athlete %d %ss %d",
 			activity.OwnerID,
 			activity.AspectType,
-			activity.ObjectID),
-		Severity: logging.Info,
-	})
+			activity.ObjectID)
 	fmt.Fprint(response, "OK")
 }
 
@@ -184,10 +161,7 @@ func invalidAction(activity activityAction) bool {
 		// publish
 		return false
 	default:
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Ignoring action %s", activity.AspectType),
-			Severity: logging.Warning,
-		})
+		log.Printf("Ignoring action %s", activity.AspectType)
 
 		return true
 	}
@@ -195,10 +169,7 @@ func invalidAction(activity activityAction) bool {
 
 func invalidSubscription(activity activityAction) bool {
 	if activity.SubscriptionID != secret.SubscriptionID {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Invalid subscription id %d", activity.SubscriptionID),
-			Severity: logging.Warning,
-		})
+		log.Printf("Invalid subscription id %d", activity.SubscriptionID)
 
 		return true
 	}
@@ -219,17 +190,11 @@ func forwardMessage(response http.ResponseWriter, request *http.Request, payload
 
 	messageID, err := pubClient.Topic(os.Getenv("PUBSUB_TOPIC")).Publish(request.Context(), message).Get(request.Context())
 	if err != nil {
-		logger.Log(logging.Entry{
-			Payload:  fmt.Sprintf("Error publishing message %v", err),
-			Severity: logging.Alert,
-		})
+		log.Panicf("Error publishing message %v", err)
 		http.Error(response, "Error publishing message", http.StatusInternalServerError)
 
 		return
 	}
 
-	logger.Log(logging.Entry{
-		Payload:  fmt.Sprintf("Message sent %s", messageID),
-		Severity: logging.Info,
-	})
+	log.Printf("Message sent %s", messageID)
 }

@@ -110,12 +110,6 @@ func enqueue(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if ignoredAthlete(activity) {
-		fmt.Fprint(response, "OK")
-
-		return
-	}
-
 	if invalidSubscription(activity) {
 		http.Error(response, "Invalid subscription id", http.StatusForbidden)
 
@@ -171,14 +165,6 @@ func invalidSubscription(activity activityAction) bool {
 	if activity.SubscriptionID != secret.SubscriptionID {
 		log.Printf("Invalid subscription id %d", activity.SubscriptionID)
 
-		return true
-	}
-
-	return false
-}
-
-func ignoredAthlete(activity activityAction) bool {
-	if activity.OwnerID == 43380524 {
 		return true
 	}
 

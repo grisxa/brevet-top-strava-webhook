@@ -21,5 +21,5 @@ verify-online:
 	curl "https://brevet.top/strava-webhook?hub.mode=subscribe&hub.challenge=random&hub.verify_token=${VERIFY_TOKEN}"
 
 test:
-	python -m pytest -v
-	pylama
+	go test -v -coverprofile=coverage.out
+	go tool cover -html=coverage.out

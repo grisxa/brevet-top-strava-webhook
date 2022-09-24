@@ -4,9 +4,4 @@ coverage/
 .coverage
 htmlcov/
 
-.pytest_cache/
-*.pyc
-__pycache__/
-*.egg-info/
-
 temp/

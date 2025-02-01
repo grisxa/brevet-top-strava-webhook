@@ -46,5 +46,5 @@ jobs:
         entry_point: 'StravaWebhook'
         memory_mb: '128'
         env_vars: 'PUBSUB_TOPIC=strava,GCLOUD_PROJECT=baltic-star-cloud'
-        secret_environment_variables: 'STRAVA=projects/baltic-star-cloud/secrets/strava:latest'
+        secret_environment_variables: 'STRAVA=projects/baltic-star-cloud/secrets/strava/versions/latest'
         timeout: 10

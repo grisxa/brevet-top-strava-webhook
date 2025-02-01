@@ -25,10 +25,11 @@ jobs:
     - id: auth
       uses: google-github-actions/auth@v2
       with:
-        credentials_json: '${{ secrets.gcp_credentials }}'
+        workload_identity_provider: 'projects/289323711544/locations/global/workloadIdentityPools/baltic-star-pool/providers/github-actions-provider'
+        service_account: 'github-deploy-functions@baltic-star-cloud.iam.gserviceaccount.com'
 
     - name: Cloud Functions Deploy
-      uses: google-github-actions/deploy-cloud-functions@v3
+      uses: google-github-actions/deploy-cloud-functions@v2
       with:
         name: 'stravaWebhook'
         runtime: 'go122'

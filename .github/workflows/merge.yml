@@ -1,0 +1,42 @@
+name: Go
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.22
+
+    - name: Build
+      run: go build -v
+
+    - name: Test
+      run: go test -v
+
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: '${{ secrets.gcp_credentials }}'
+
+    - name: Cloud Functions Deploy
+      uses: google-github-actions/deploy-cloud-functions@v0.10.1
+      with:
+        name: 'stravaWebhook'
+        runtime: 'go122'
+        entry_point: 'StravaWebhook'
+        memory_mb: '128'
+        env_vars: 'PUBSUB_TOPIC=strava,GCLOUD_PROJECT=baltic-star-cloud'
+        secret_environment_variables: 'STRAVA=projects/baltic-star-cloud/secrets/strava:latest'
+        timeout: 10
+        event_trigger_type: 'http'

@@ -1,11 +1,10 @@
-PORT ?= 9090
-all:
-	functions_framework --target=strava_webhook --signature-type http --port 9090 --debug
+PORT ?= 8080
+CLOUD_URL ?= "https://us-central1-baltic-star-cloud.cloudfunctions.net"
 
 deploy:
 	gcloud beta functions deploy stravaWebhook \
 	  --entry-point StravaWebhook \
-	  --runtime go116 \
+	  --runtime go122 \
 	  --trigger-http \
 	  --memory 128MB \
 	  --timeout 10s \
@@ -23,3 +22,24 @@ verify-online:
 test:
 	go test -v -coverprofile=coverage.out
 	go tool cover -html=coverage.out
+
+# curl "https://us-central1-baltic-star-cloud.cloudfunctions.net/stravaWebhookGo
+test-create:
+	curl "$(CLOUD_URL)/stravaWebhook" \
+	  -X POST \
+	  -H "Content-Type:application/json" \
+	  -d '@strava_create.json'
+
+
+#	curl "localhost:$(PORT)/baltic-star-cloud/us-central1/stravaWebhook"
+test-update:
+	curl "$(CLOUD_URL)/stravaWebhook" \
+	  -X POST \
+	  -H "Content-Type:application/json" \
+	  -d '@strava_update.json'
+
+test-revoke:
+	curl "$(CLOUD_URL)/stravaWebhook" \
+	  -X POST \
+	  -H "Content-Type:application/json" \
+	  -d '@strava_revoke.json'
